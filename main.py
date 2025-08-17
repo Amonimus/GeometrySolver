@@ -239,7 +239,7 @@ class Angle(Object):
 
 	def assess(self):
 		pass
-		#TODO: If three edges share a point, either the sum of two angles equals the third, or the three angles equal 360
+		#TODO: If three edges share a point, either the sum of two angles equals the third, or the three angles equal 360. This also makes the figure ambigious between a larger triangle and a quadrilateral.
 		#TODO: If three edges form a triangle, the sum of their angles should be 180
 
 class Triangle(Object):
