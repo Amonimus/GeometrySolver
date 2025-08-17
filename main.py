@@ -127,50 +127,50 @@ class Point(Object):
 	# 	else:
 	# 		return False
 
-	def is_connected(self, point: 'Point') -> Optional['Section']:
-		sections: list[Section] = self.env.get_list(Section)
-		for section in sections:
-			points: list[Point] = section.get_list(Point)
+	def is_connected(self, point: 'Point') -> Optional['Edge']:
+		edges: list[Edge] = self.env.get_list(Edge)
+		for edge in edges:
+			points: list[Point] = edge.get_list(Point)
 			if self in points and point in points:
-				return section
+				return edge
 		return None
 
-	# def connect(self, point: 'Point') -> 'Section':
-	# 	section: Section = self.env.find(self, point)
-	# 	if section is None:
-	# 		section: Section = Section(self.env, self, point)
-	# 	return section
+	# def connect(self, point: 'Point') -> 'edge':
+	# 	edge: edge = self.env.find(self, point)
+	# 	if edge is None:
+	# 		edge: edge = edge(self.env, self, point)
+	# 	return edge
 
-	def connect(self, point: 'Point') -> 'Section':
-		section: Section = self.is_connected(point)
-		if section is None:
-			section: Section = Section(self.env, self, point)
-		return section
+	def connect(self, point: 'Point') -> 'Edge':
+		edge: Edge = self.is_connected(point)
+		if edge is None:
+			edge: Edge = Edge(self.env, self, point)
+		return edge
 
 
-class Section(Object):
+class Edge(Object):
 	def insert(self, point: Point) -> Point:
 		if isinstance(point, Point) and len(self.get_list(Point)) == 2:
-			raise AdditionError("How can a section include more than two points?")
+			raise AdditionError("How can a edge include more than two points?")
 		super().insert(point)
 		return point
 
 	def build(self, *points):
 		if len(points) != 2:
-			raise BuildError("How can a section not include two points?")
+			raise BuildError("How can a edge not include two points?")
 		for point in points:
 			if not isinstance(point, Point):
 				raise BuildError("Trying to build not with points!")
 			self.add(point)
 
-	def is_connected_with_point(self, point: 'Point') -> Optional['Section']:
+	def is_connected_with_point(self, point: 'Point') -> Optional['Edge']:
 		pass
 
-	# sections: list[Section] = self.env.get_list(Section)
-	# for section in sections:
-	# 	points: list[Point] = section.get_list(Point)
+	# edges: list[edge] = self.env.get_list(edge)
+	# for edge in edges:
+	# 	points: list[Point] = edge.get_list(Point)
 	# 	if self in points and point in points:
-	# 		return section
+	# 		return edge
 	# return None
 
 	def add_check(self):
@@ -179,44 +179,44 @@ class Section(Object):
 		print(f"{repr(self)} has points {self_points}...")
 		if len(self_points) < 2:
 			return
-		sections2: list[Section] = []
+		edges2: list[Edge] = []
 		for point in self_points:
-			for section in point.get_list(Section):
-				if section != self:
-					sections2.append(section)
-		print(f"{repr(self)} has neighbours {sections2}...")
-		self.look_build_angles(self_points, sections2)
-		self.look_build_triangle(self_points, sections2)
+			for edge in point.get_list(Edge):
+				if edge != self:
+					edges2.append(edge)
+		print(f"{repr(self)} has neighbours {edges2}...")
+		self.look_build_angles(self_points, edges2)
+		self.look_build_triangle(self_points, edges2)
 
-	def look_build_angles(self, self_points, sections2):
-		for section in sections2:
-			for point in section.get_list(Point):
+	def look_build_angles(self, self_points, edges2):
+		for edge in edges2:
+			for point in edge.get_list(Point):
 				if point in self_points:
-					self.build_if_has_not(Angle, point, self, section)
+					self.build_if_has_not(Angle, point, self, edge)
 
-	def look_build_triangle(self, self_points, sections2):
-		points_paths: list[tuple[Section, Point]] = []
-		for section in sections2:
-			for point in section.get_list(Point):
+	def look_build_triangle(self, self_points, edges2):
+		points_paths: list[tuple[Edge, Point]] = []
+		for edge in edges2:
+			for point in edge.get_list(Point):
 				if point not in self_points:
-					points_paths.append((section, point))
+					points_paths.append((edge, point))
 		points2: list[Point] = [points_path[1] for points_path in points_paths]
 		print(f"{repr(self)} has second-neighbour points {points2}...")
 		for point in list(set(points2)):
 			if points2.count(point) == 2:
-				reach_sections: list[Section] = []
+				reach_edges: list[Edge] = []
 				reach_points: list[Point] = []
 				for points_path in points_paths:
 					if points_path[1] == point:
 						reach_points.append(points_path[1])
-						reach_sections.append(points_path[0])
-				print(f"Two paths from {repr(self)} to {repr(point)} with {reach_points} then {reach_sections}, forming a Triangle")
-				section_a, section_b = tuple(reach_sections)
+						reach_edges.append(points_path[0])
+				print(f"Two paths from {repr(self)} to {repr(point)} with {reach_points} then {reach_edges}, forming a Triangle")
+				edge_a, edge_b = tuple(reach_edges)
 				point_a, point_b = tuple(reach_points)
-				triangle_by_sections: Triangle = self.env.find_that_has(Triangle, self, section_a, section_b)
+				triangle_by_edges: Triangle = self.env.find_that_has(Triangle, self, edge_a, edge_b)
 				triangle_by_points: Triangle = self.env.find_that_has(Triangle, point, point_a, point_b)
-				if triangle_by_sections is None and triangle_by_points is None:
-					Triangle.build_with_sections(self.env, self, section_a, section_b)
+				if triangle_by_edges is None and triangle_by_points is None:
+					Triangle.build_with_edges(self.env, self, edge_a, edge_b)
 
 
 # class Line(Object):
@@ -227,20 +227,20 @@ class Angle(Object):
 		super().__init__(env, *components)
 		self.value: Optional[float] = None
 
-	def build(self, point: Point, section_a: Section, section_b: Section):
+	def build(self, point: Point, edge_a: Edge, edge_b: Edge):
 		if not isinstance(point, Point):
 			raise BuildError
-		for section in [section_a, section_b]:
-			if not isinstance(section, Section):
+		for edge in [edge_a, edge_b]:
+			if not isinstance(edge, Edge):
 				raise BuildError
 		self.add(point)
-		self.add(section_a)
-		self.add(section_b)
+		self.add(edge_a)
+		self.add(edge_b)
 
 	def assess(self):
 		pass
-		#TODO: If three sections share a point, either the sum of two angles equals the third, or the three angles equal 180
-		#TODO: If three sections form a triangle, the sum of their angles should be 180
+		#TODO: If three edges share a point, either the sum of two angles equals the third, or the three angles equal 360
+		#TODO: If three edges form a triangle, the sum of their angles should be 180
 
 class Triangle(Object):
 
@@ -249,31 +249,31 @@ class Triangle(Object):
 			if not isinstance(point, Point):
 				raise BuildError("Trying to build not with points!")
 			self.add(point)
-		section_a: Section = point_a.connect(point_b)
-		section_b: Section = point_b.connect(point_c)
-		section_c: Section = point_c.connect(point_a)
-		self.add(section_a)
-		self.add(section_b)
-		self.add(section_c)
+		edge_a: Edge = point_a.connect(point_b)
+		edge_b: Edge = point_b.connect(point_c)
+		edge_c: Edge = point_c.connect(point_a)
+		self.add(edge_a)
+		self.add(edge_b)
+		self.add(edge_c)
 
 	@classmethod
-	def build_with_sections(cls, env: 'Enviroment', section_a: Section, section_b: Section, section_c: Section):
-		for section in [section_a, section_b, section_c]:
-			if not isinstance(section, Section):
-				raise BuildError("Trying to build not with sections!")
-		points: list[Point] = list(set(section_a.get_list(Point) + section_b.get_list(Point) + section_c.get_list(Point)))
+	def build_with_edges(cls, env: 'Enviroment', edge_a: Edge, edge_b: Edge, edge_c: Edge):
+		for edge in [edge_a, edge_b, edge_c]:
+			if not isinstance(edge, Edge):
+				raise BuildError("Trying to build not with edges!")
+		points: list[Point] = list(set(edge_a.get_list(Point) + edge_b.get_list(Point) + edge_c.get_list(Point)))
 		return cls(env, *points)
 
 	def add_check(self):
 		print(f"{repr(self)} Self-check...")
-		sections: list[Section] = self.get_list(Section)
-		for section1 in sections:
-			for section2 in sections:
-				if section1 != section2:
-					for point1 in section1.get_list(Point):
-						for point2 in section2.get_list(Point):
+		edges: list[Edge] = self.get_list(Edge)
+		for edge1 in edges:
+			for edge2 in edges:
+				if edge1 != edge2:
+					for point1 in edge1.get_list(Point):
+						for point2 in edge2.get_list(Point):
 							if point1 == point2:
-								angle:Angle = self.build_if_has_not(Angle, point1, section1, section2)
+								angle:Angle = self.build_if_has_not(Angle, point1, edge1, edge2)
 								self.add(angle)
 
 class Enviroment(Object):
