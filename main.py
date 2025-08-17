@@ -1,0 +1,316 @@
+from typing import Optional
+
+
+def all_in_list(list1: list, list2: list):
+	print(f"Checks if all {list1} is in {list2}...")
+	for e in list1:
+		if e not in list2:
+			print(f"{repr(e)} is not in {list2}")
+			return False
+	return True
+
+
+class AdditionError(Exception):
+	pass
+
+
+class BuildError(Exception):
+	pass
+
+
+class classproperty(property):
+	# noinspection PyMethodOverriding
+	def __get__(self, owner_self, owner_cls):
+		return self.fget(owner_cls)
+
+
+class Object:
+	def __init__(self, env: 'Enviroment', *components: tuple['Object']):
+		self.name: str = "NONE"
+		print(f"Building {repr(self)} with {components}")
+		self.env: Enviroment = env
+		self.relations: dict[str, list[Object]] = {}
+		self.env.insert(self)
+		if len(components) > 0:
+			self.build(*components)
+			self.add_check()
+		print(f"New object: {repr(self)}")
+
+	def __str__(self) -> str:
+		return f"{self.classname}({self.name}, {self.relations})"
+
+	def __repr__(self) -> str:
+		return f"{self.classname}({self.name})"
+
+	@classproperty
+	def classname(self) -> str:
+		return self.__name__
+
+	def ensure_class(self, obj: 'Object') -> bool:
+		if obj.classname not in self.relations:
+			self.relations[obj.classname] = []
+			return False
+		else:
+			return True
+
+	def get_list(self, obj: 'Object') -> list['Object']:
+		if obj.classname in self.relations:
+			return self.relations[obj.classname]
+		else:
+			return []
+
+	def insert(self, obj: 'Object') -> 'Object':
+		self.ensure_class(obj)
+		obj_list: list['Object'] = self.get_list(obj)
+		if obj not in obj_list:
+			print(f"Adding {repr(obj)} to {repr(self)}, is not in {obj_list}")
+			obj_list.append(obj)
+		return obj
+
+	def add(self, obj: 'Object') -> 'Object':
+		print(f"Adding {repr(obj)} to {repr(self)}")
+		self.insert(obj)
+		obj.insert(self)
+		return obj
+
+	def build(self):
+		raise NotImplementedError
+
+	def add_check(self):
+		pass
+
+	#
+	# def find(self, *components: tuple['Object']) -> 'Object':
+	# 	print(f"{repr(self)} looking for an object that has {components}...")
+	# 	object_list: list[Object] = []
+	# 	for component in components:
+	# 		object_list += self.get_list(component)
+	# 	# input(f"{repr(self)} has {object_list}...")
+	# 	# for obj in object_list:
+	# 	# 	same_class_components: list[Object] = []
+	# 	# 	for component in components:
+	# 	# 		same_class_components += component.get_list(component)
+	# 	# 	input(f"Looking through {same_class_components}...")
+	# 	# 	if all_in_list(components, same_class_components):
+	# 	# 		input(f"Found {obj}")
+	# 	# 		return obj
+	# 	input(f"Found nothing")
+	# 	return None
+
+	def find_that_has(self, obj_class: 'Object', *components: tuple['Object']) -> Optional['Object']:
+		print(f"{repr(self)} looking for an object of class {obj_class.classname} that has {components}...")
+		objects: list[Object] = self.get_list(obj_class)
+		for obj in objects:
+			print(f"Knows {obj}...")
+			inner_components: list[Object] = []
+			for component in components:
+				for inner_component in obj.get_list(component):
+					if inner_component not in inner_components:
+						inner_components.append(inner_component)
+			if all_in_list(components, inner_components):
+				print(f"{obj} fits the description")
+				return obj
+		print(f"Found nothing")
+		return None
+
+	def build_if_has_not(self, obj_class: 'Object', *components: tuple['Object']) -> Optional['Object']:
+		obj: Object = self.env.find_that_has(obj_class, *components)
+		if obj is None:
+			obj = obj_class(self.env, *components)
+		return obj
+
+class Point(Object):
+	# def is_connected(self, point: 'Point') -> bool:
+	# 	print(f"Checking if {repr(self)} is connected to {repr(point)}")
+	# 	if self.env.find(self, point):
+	# 		return True
+	# 	else:
+	# 		return False
+
+	def is_connected(self, point: 'Point') -> Optional['Section']:
+		sections: list[Section] = self.env.get_list(Section)
+		for section in sections:
+			points: list[Point] = section.get_list(Point)
+			if self in points and point in points:
+				return section
+		return None
+
+	# def connect(self, point: 'Point') -> 'Section':
+	# 	section: Section = self.env.find(self, point)
+	# 	if section is None:
+	# 		section: Section = Section(self.env, self, point)
+	# 	return section
+
+	def connect(self, point: 'Point') -> 'Section':
+		section: Section = self.is_connected(point)
+		if section is None:
+			section: Section = Section(self.env, self, point)
+		return section
+
+
+class Section(Object):
+	def insert(self, point: Point) -> Point:
+		if isinstance(point, Point) and len(self.get_list(Point)) == 2:
+			raise AdditionError("How can a section include more than two points?")
+		super().insert(point)
+		return point
+
+	def build(self, *points):
+		if len(points) != 2:
+			raise BuildError("How can a section not include two points?")
+		for point in points:
+			if not isinstance(point, Point):
+				raise BuildError("Trying to build not with points!")
+			self.add(point)
+
+	def is_connected_with_point(self, point: 'Point') -> Optional['Section']:
+		pass
+
+	# sections: list[Section] = self.env.get_list(Section)
+	# for section in sections:
+	# 	points: list[Point] = section.get_list(Point)
+	# 	if self in points and point in points:
+	# 		return section
+	# return None
+
+	def add_check(self):
+		print(f"{repr(self)} Self-check...")
+		self_points: list[Point] = self.get_list(Point)
+		print(f"{repr(self)} has points {self_points}...")
+		if len(self_points) < 2:
+			return
+		sections2: list[Section] = []
+		for point in self_points:
+			for section in point.get_list(Section):
+				if section != self:
+					sections2.append(section)
+		print(f"{repr(self)} has neighbours {sections2}...")
+		self.look_build_angles(self_points, sections2)
+		self.look_build_triangle(self_points, sections2)
+
+	def look_build_angles(self, self_points, sections2):
+		for section in sections2:
+			for point in section.get_list(Point):
+				if point in self_points:
+					self.build_if_has_not(Angle, point, self, section)
+
+	def look_build_triangle(self, self_points, sections2):
+		points_paths: list[tuple[Section, Point]] = []
+		for section in sections2:
+			for point in section.get_list(Point):
+				if point not in self_points:
+					points_paths.append((section, point))
+		points2: list[Point] = [points_path[1] for points_path in points_paths]
+		print(f"{repr(self)} has second-neighbour points {points2}...")
+		for point in list(set(points2)):
+			if points2.count(point) == 2:
+				reach_sections: list[Section] = []
+				reach_points: list[Point] = []
+				for points_path in points_paths:
+					if points_path[1] == point:
+						reach_points.append(points_path[1])
+						reach_sections.append(points_path[0])
+				print(f"Two paths from {repr(self)} to {repr(point)} with {reach_points} then {reach_sections}, forming a Triangle")
+				section_a, section_b = tuple(reach_sections)
+				point_a, point_b = tuple(reach_points)
+				triangle_by_sections: Triangle = self.env.find_that_has(Triangle, self, section_a, section_b)
+				triangle_by_points: Triangle = self.env.find_that_has(Triangle, point, point_a, point_b)
+				if triangle_by_sections is None and triangle_by_points is None:
+					Triangle.build_with_sections(self.env, self, section_a, section_b)
+
+
+# class Line(Object):
+# 	pass
+
+class Angle(Object):
+	def __init__(self, env: 'Enviroment', *components: tuple['Object']):
+		super().__init__(env, *components)
+		self.value: Optional[float] = None
+
+	def build(self, point: Point, section_a: Section, section_b: Section):
+		if not isinstance(point, Point):
+			raise BuildError
+		for section in [section_a, section_b]:
+			if not isinstance(section, Section):
+				raise BuildError
+		self.add(point)
+		self.add(section_a)
+		self.add(section_b)
+
+	def assess(self):
+		pass
+		#TODO: If three sections share a point, either the sum of two angles equals the third, or the three angles equal 180
+		#TODO: If three sections form a triangle, the sum of their angles should be 180
+
+class Triangle(Object):
+
+	def build(self, point_a: Point, point_b: Point, point_c: Point):
+		for point in [point_a, point_b, point_c]:
+			if not isinstance(point, Point):
+				raise BuildError("Trying to build not with points!")
+			self.add(point)
+		section_a: Section = point_a.connect(point_b)
+		section_b: Section = point_b.connect(point_c)
+		section_c: Section = point_c.connect(point_a)
+		self.add(section_a)
+		self.add(section_b)
+		self.add(section_c)
+
+	@classmethod
+	def build_with_sections(cls, env: 'Enviroment', section_a: Section, section_b: Section, section_c: Section):
+		for section in [section_a, section_b, section_c]:
+			if not isinstance(section, Section):
+				raise BuildError("Trying to build not with sections!")
+		points: list[Point] = list(set(section_a.get_list(Point) + section_b.get_list(Point) + section_c.get_list(Point)))
+		return cls(env, *points)
+
+	def add_check(self):
+		print(f"{repr(self)} Self-check...")
+		sections: list[Section] = self.get_list(Section)
+		for section1 in sections:
+			for section2 in sections:
+				if section1 != section2:
+					for point1 in section1.get_list(Point):
+						for point2 in section2.get_list(Point):
+							if point1 == point2:
+								angle:Angle = self.build_if_has_not(Angle, point1, section1, section2)
+								self.add(angle)
+
+class Enviroment(Object):
+	# noinspection PyMissingConstructor
+	def __init__(self):
+		self.name: str = "ENV"
+		self.relations: dict[str, list[Object]] = {}
+		print(f"New ENV: {repr(self)}")
+
+	def display(self):
+		print(f"==={repr(self)}===")
+		for classname, obj_list in self.relations.items():
+			print(f"-{classname}s:")
+			for obj in obj_list:
+				print(f"--{obj}")
+		print(f"======")
+
+	def insert(self, obj: 'Object') -> Object:
+		super().insert(obj)
+		obj.name = str(len(self.get_list(obj)))
+		return obj
+
+
+def main():
+	env: Enviroment = Enviroment()
+	p1 = Point(env)
+	p2 = Point(env)
+	p1.connect(p2)
+	env.display()
+	p3 = Point(env)
+	p3.connect(p1)
+	p3.connect(p2)
+	env.display()
+	p4 = Point(env)
+	t2 = Triangle(env, p1, p2, p4)
+	env.display()
+
+
+if __name__ == '__main__':
+	main()
