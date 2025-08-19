@@ -1,0 +1,31 @@
+1.
+Angle(AOB)
+Angle(AOC) IN Angle(AOB)
+Angle(BOC) IN Angle(AOB)
+Angle(BOC) = 18
+Edge(OC) = Bisected(AOB)
+FIND Angle(AOB)
+
+2.
+Triangle(ABC)
+Angle(ABC) = 65
+Angle(BCA) = 43
+FIND Angle(BAC)
+
+3.
+Triangle(ABC)
+Edge(AB) = Edge(BC)
+Angle(BAC) = 85
+FIND Angle(ABC)
+
+4.
+Triangle(ABC)
+Angle(ABC) = 24
+Edge(AB) = Edge(BC)
+FIND Angle(BAC), Angle(BCA)
+
+5.
+Triangle(ABC)
+Angle(ACB) = 90
+Angle(CAB) = 46
+FIND Angle(BCA)
